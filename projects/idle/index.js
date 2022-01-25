@@ -3,6 +3,7 @@ const BigNumber = require('bignumber.js');
 const COMP_abi = require('./abis/COMP.json');
 const IdleTokenV4 = require('./abis/IdleTokenV4.json');
 const IdleTokenV3 = require('./abis/IdleTokenV3.json');
+const IdleCDO= require('./abis/IdleCDO.json');
 
 const BNify = n => new BigNumber(n);
 const web3Call = async (block,target,abi,params=null) => {
@@ -16,6 +17,19 @@ const web3Call = async (block,target,abi,params=null) => {
 }
 
 // Idle tokens info
+const Tranches={
+  idleDAICDO: {
+    abi: IdleCDO,
+    underlyingToken:"DAI",
+    address: '0xd0DbcD556cA22d3f3c142e9a3220053FD7a247BC'
+  },
+  idleFEICDO: {
+    abi: IdleCDO,
+    underlyingToken:"FEI",
+    address: '0x956f47f50a910163d8bf957cf5846d573e7f87ca'
+  },
+  
+}
 const contracts = {
 
   idleWETHYieldV4: {
@@ -175,6 +189,7 @@ async function tvl(timestamp, block) {
   const calls = [];
 
   Object.keys(contracts).forEach( (contractName) => {
+    
     const call = new Promise( async (resolve, reject) => {
 
       const tokenBalances = {};
@@ -220,6 +235,23 @@ async function tvl(timestamp, block) {
     });
 
     calls.push(call);
+  });
+
+  Object.keys(Tranches).forEach( (Tranche) => {
+    const call = new Promise( async (resolve, reject) => {
+      const tokenBalances={};
+      const contractInfo= Tranches[contractInfo]
+      const tokenDecimals=underlyingTokens[contractInfo.underlyingToken].decimals;
+      const underlyingTokenAddr=underlyingTokens[contractInfo.underlyingToken].address;
+
+      let contractValue= await Promise(web3Call(block,contractInfo.address,contractInfo.abi.getContractValue));
+      let tokenTVL=BNify(contractValue).div(`1e${tokenDecimals}`);
+
+      tokenBalances[underlyingTokenAddr] = tokenTVL;
+
+      resolve(tokenBalances)
+    });
+    calls.push(call)
   });
 
   const balances = {};
